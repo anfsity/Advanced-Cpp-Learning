@@ -89,7 +89,7 @@ template <typename T> void foo(T *); // #2
 // 这里会发生 SFINAE
 // 经过 SFINAE，代选的模板集合进一步缩小
 // 剩下的函数模板和普通函数一起参与重载决议 （普通函数的优先级大于函数模板）
-// 如果只有函数模板，在多个函数模板之间，通过 partial odering rule 选择出最终的主模板
+// 如果只有函数模板，在多个函数模板之间，通过 partial ordering rule 选择出最终的主模板
 // 进入选择特化阶段，如果对应的主模板有全特化，对全特化进行抉择
 // 最终替换生成实例
 
@@ -103,13 +103,13 @@ template <typename T> void foo(T *); // #2
 // 如果全特化没有匹配上，尝试匹配偏特化，在尝试偏特化期间，如果产生非法代码，这个偏特化会 SFINAE
 // 经过 SFINAE，代选的模板集合进一步缩小
 // 如果此时没有偏特化匹配上，选择主模板匹配
-// 如果有多个偏特化匹配，通过 partial odering rule 选择出最终的模板 （类模板被转化为函数模板，归一操作）
+// 如果有多个偏特化匹配，通过 partial ordering rule 选择出最终的模板 （类模板被转化为函数模板，归一操作）
 // 如果选择不出来，抛出 ambiguous error （歧义错误）
 // 最终替换生成实例
 // clang-format on
 
 // 提出问题：
-// partial oredering rule 分别在函数模板和类模板的什么阶段发挥作用？
+// partial ordering rule 分别在函数模板和类模板的什么阶段发挥作用？
 // 偏序规则在函数模板的重载决议发挥作用
 // 比较对象是主模板和主模板之间
 // 在类模板的特化选择阶段发挥作用
@@ -144,7 +144,7 @@ int main() {
   s s(1, 1.0f); // match #2, output: false
 
   // int tmp = 1;
-  // foo(tmp, &tmp); //! call to 'foo' is ambigous
+  // foo(tmp, &tmp); //! call to 'foo' is ambiguous
 
   return 0;
 }
