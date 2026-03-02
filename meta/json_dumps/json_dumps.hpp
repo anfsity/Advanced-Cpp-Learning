@@ -20,20 +20,20 @@ concept is_one_of = (std::is_same_v<T, Ts> || ...);
 
 // normal types
 std::string dumps(const auto &value)
-    requires is_one_of<std::decay_t<decltype(value)>, int, long, long long,
-                       unsigned, unsigned long, unsigned long long, float,
-                       double, long double>
+  requires is_one_of<std::decay_t<decltype(value)>, int, long, long long,
+                     unsigned, unsigned long, unsigned long long, float, double,
+                     long double>
 {
-    return std::format("{}", value);
+  return std::format("{}", value);
 }
 
 // string char
 std::string dumps(const auto &value)
-    requires is_one_of<std::decay_t<decltype(value)>, std::string, char>
+  requires is_one_of<std::decay_t<decltype(value)>, std::string, char>
 {
-    // clang-format off
-    return std::format("""{}""\n",value);
-    // clang-format on
+  // clang-format off
+    return std::format("\"{}\"",value);
+  // clang-format on
 }
 
 // char *
@@ -41,9 +41,9 @@ static inline std::string dumps(const char *s) { return dumps(std::string(s)); }
 
 // void, nullptr
 std::string dumps(const auto &value)
-    requires is_one_of<std::decay_t<decltype(value)>, void, std::nullptr_t>
+  requires is_one_of<std::decay_t<decltype(value)>, void, std::nullptr_t>
 {
-    return "null";
+  return "null";
 }
 
 // bool
@@ -93,17 +93,17 @@ static inline std::string dumps(const bool &b) { return b ? "true" : "false"; }
 // vector, list, deque, forward_list, set, multiset, unordered_set,
 // unordered_multiset
 template <typename T>
-    requires std::ranges::input_range<std::decay_t<T>> &&
-             (!std::same_as<std::decay_t<T>, std::string>)
+  requires std::ranges::input_range<std::decay_t<T>> &&
+           (!std::same_as<std::decay_t<T>, std::string>)
 std::string dumps(const T &container) {
-    std::string str;
-    for (const auto &[i, elem] : container | std::views::enumerate) {
-        str += dumps(elem);
-        if (i != ssize(container) - 1) {
-            str += ", ";
-        }
+  std::string str;
+  for (const auto &[i, elem] : container | std::views::enumerate) {
+    str += dumps(elem);
+    if (i != ssize(container) - 1) {
+      str += ", ";
     }
-    return std::format("[{}]", str);
+  }
+  return std::format("[{}]", str);
 }
 
 /////////////////////////////////////////////////////////////////
@@ -113,44 +113,44 @@ std::string dumps(const T &container) {
 
 template <typename T>
 concept is_pair_like = requires(T t) {
-    t.first;
-    t.second;
+  t.first;
+  t.second;
 };
 
 template <typename T>
-    requires std::ranges::input_range<std::decay_t<T>> &&
-             is_pair_like<std::decay_t<T>>
+  requires std::ranges::input_range<std::decay_t<T>> &&
+           is_pair_like<std::decay_t<T>>
 std::string dumps(const T &map_like) {
-    std::string str;
-    for (const auto &[i, elem] : map_like | std::views::enumerate) {
-        str += dumps(elem);
-        if (i != ssize(map_like) - 1) {
-            str += ", ";
-        }
+  std::string str;
+  for (const auto &[i, elem] : map_like | std::views::enumerate) {
+    str += dumps(elem);
+    if (i != ssize(map_like) - 1) {
+      str += ", ";
     }
-    return std::format("{{{}}}", str);
+  }
+  return std::format("{{{}}}", str);
 }
 
 // std::pair
 template <typename T, typename U>
 std::string dumps(const std::pair<T, U> &pair) {
-    return std::format("{{{} : {}}}", dumps(pair.first), dumps(pair.second));
+  return std::format("{{{} : {}}}", dumps(pair.first), dumps(pair.second));
 }
 
 /////////////////////////////////////////////////////////////////
 
 // int[][]
 template <typename T>
-    requires std::is_array_v<T>
+  requires std::is_array_v<T>
 std::string dumps(const T &arr) {
-    std::string str;
-    for (const auto &[i, elem] : arr | std::views::enumerate) {
-        str += dumps(elem);
-        if (i != std::extent_v<T> - 1) {
-            str += ", ";
-        }
+  std::string str;
+  for (const auto &[i, elem] : arr | std::views::enumerate) {
+    str += dumps(elem);
+    if (i != std::extent_v<T> - 1) {
+      str += ", ";
     }
-    return std::format("[{}]", str);
+  }
+  return std::format("[{}]", str);
 }
 
 /////////////////////////////////////////////////////////////////
@@ -180,49 +180,59 @@ std::string dumps(const T &arr) {
 // }
 
 template <typename... Args>
-    requires(sizeof...(Args) == 0)
-std::string dumps(const std::tuple<Args...> &tup) {
-    return "[]";
+  requires(sizeof...(Args) == 0)
+std::string dumps(const std::tuple<Args...> &) {
+  return "[]";
 }
 
 template <typename... Args> std::string dumps(const std::tuple<Args...> &tup) {
-    return std::apply(
-        [](const auto &...args) {
-            std::string str;
-            size_t index = 0;
-            ((str += dumps(args) + (++index == sizeof...(Args) ? "" : ", ")),
-             ...);
-            return std::format("[{}]", str);
-        },
-        tup);
+  return std::apply(
+      [](const auto &...args) {
+        std::string str;
+        size_t index = 0;
+        ((str += dumps(args) + (++index == sizeof...(Args) ? "" : ", ")), ...);
+        return std::format("[{}]", str);
+      },
+      tup);
 }
 
 /////////////////////////////////////////////////////////////////
 
-template <typename T> std::string dumps(const T *ptr) { return dumps(*ptr); }
-
-template <typename T, template <typename...> class U>
-struct is_instantiation_of : std::false_type {};
-
-template <template <typename...> class U, typename... Args>
-struct is_instantiation_of<U<Args...>, U> : std::true_type {};
-
-template <typename T, template <typename...> class U>
-inline constexpr bool is_instantiation_of_v = is_instantiation_of<T, U>::value;
-
-template <typename T>
-concept is_smart_pointer =
-    is_instantiation_of_v<std::decay_t<T>, std::shared_ptr> ||
-    is_instantiation_of_v<std::decay_t<T>, std::unique_ptr> ||
-    is_instantiation_of_v<std::decay_t<T>, std::weak_ptr>;
-
-template <typename T>
-    requires is_smart_pointer<T>
-std::string dumps(const std::shared_ptr<T> &ptr) {
+template <typename T> std::string dumps(const T *ptr) {
+  if (ptr) {
     return dumps(*ptr);
+  }
+  return "null";
 }
 
-// FIXME: 这里仍然存在问题，等候修复，如解引用 weak ptr
+template <typename T>
+concept is_smart_pointer = requires(const T &ptr) {
+  { *ptr };
+  { static_cast<bool>(ptr) };
+} && !std::is_pointer_v<std::decay_t<T>>;
+
+template <typename T>
+concept is_weak_pointer = requires(const T &ptr) {
+  { ptr.lock() };
+} && !std::is_pointer_v<std::decay_t<T>> && !is_smart_pointer<T>;
+
+template <typename T>
+  requires is_smart_pointer<T>
+std::string dumps(const T &ptr) {
+  if (ptr) {
+    return dumps(*ptr);
+  }
+  return "null";
+}
+
+template <typename T>
+  requires is_weak_pointer<T>
+std::string dumps(const T &ptr) {
+  if (auto shared = ptr.lock()) {
+    return dumps(*shared);
+  }
+  return "null";
+}
 
 } // namespace json
 
@@ -231,3 +241,5 @@ std::string dumps(const std::shared_ptr<T> &ptr) {
 // 其实没有太大区别...
 // 当初还用宏封装了一下，还挺好玩的
 // 回旋镖？
+// 参考 https://zhuanlan.zhihu.com/p/395165250 实现
+// 文章最后关于 json dumps 代码存在诸多漏洞，谨慎阅读
