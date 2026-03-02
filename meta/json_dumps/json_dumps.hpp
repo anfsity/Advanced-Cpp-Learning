@@ -18,6 +18,77 @@ namespace json {
 template <typename T, typename... Ts>
 concept is_one_of = (std::is_same_v<T, Ts> || ...);
 
+template <typename T>
+concept is_pair_like = requires(T t) {
+  t.first;
+  t.second;
+};
+
+template <typename T>
+concept is_smart_pointer = requires(const T &ptr) {
+  { *ptr };
+  { static_cast<bool>(ptr) };
+} && !std::is_pointer_v<std::decay_t<T>>;
+
+template <typename T>
+concept is_weak_pointer = requires(const T &ptr) {
+  { ptr.lock() };
+} && !std::is_pointer_v<std::decay_t<T>> && !is_smart_pointer<T>;
+
+// ---------------------- Forward Declarations ----------------------
+
+std::string dumps(const auto &value)
+  requires is_one_of<std::decay_t<decltype(value)>, int, long, long long,
+                     unsigned, unsigned long, unsigned long long, float, double,
+                     long double>;
+
+std::string dumps(const auto &value)
+  requires is_one_of<std::decay_t<decltype(value)>, std::string, char>;
+
+static inline std::string dumps(const char *s);
+
+std::string dumps(const auto &value)
+  requires is_one_of<std::decay_t<decltype(value)>, void, std::nullptr_t>;
+
+static inline std::string dumps(const bool &b);
+
+template <typename T>
+  requires std::ranges::input_range<std::decay_t<T>> &&
+           (!std::same_as<std::decay_t<T>, std::string>) &&
+           (!is_pair_like<std::ranges::range_value_t<std::decay_t<T>>>)
+std::string dumps(const T &container);
+
+template <typename T>
+  requires std::ranges::input_range<std::decay_t<T>> &&
+           is_pair_like<std::ranges::range_value_t<std::decay_t<T>>>
+std::string dumps(const T &map_like);
+
+template <typename T, typename U>
+std::string dumps(const std::pair<T, U> &pair);
+
+template <typename T>
+  requires std::is_array_v<T>
+std::string dumps(const T &arr);
+
+template <typename... Args>
+  requires(sizeof...(Args) == 0)
+std::string dumps(const std::tuple<Args...> &);
+
+template <typename... Args> 
+std::string dumps(const std::tuple<Args...> &tup);
+
+template <typename T> std::string dumps(const T *ptr);
+
+template <typename T>
+  requires is_smart_pointer<T>
+std::string dumps(const T &ptr);
+
+template <typename T>
+  requires is_weak_pointer<T>
+std::string dumps(const T &ptr);
+
+// ---------------------- Implementations ----------------------
+
 // normal types
 std::string dumps(const auto &value)
   requires is_one_of<std::decay_t<decltype(value)>, int, long, long long,
@@ -94,7 +165,8 @@ static inline std::string dumps(const bool &b) { return b ? "true" : "false"; }
 // unordered_multiset
 template <typename T>
   requires std::ranges::input_range<std::decay_t<T>> &&
-           (!std::same_as<std::decay_t<T>, std::string>)
+           (!std::same_as<std::decay_t<T>, std::string>) &&
+           (!is_pair_like<std::ranges::range_value_t<std::decay_t<T>>>)
 std::string dumps(const T &container) {
   std::string str;
   for (const auto &[i, elem] : container | std::views::enumerate) {
@@ -112,14 +184,8 @@ std::string dumps(const T &container) {
 // 我们仍然可以使用 is_one_of_impl 来实现，不过我喜欢 concept
 
 template <typename T>
-concept is_pair_like = requires(T t) {
-  t.first;
-  t.second;
-};
-
-template <typename T>
   requires std::ranges::input_range<std::decay_t<T>> &&
-           is_pair_like<std::decay_t<T>>
+           is_pair_like<std::ranges::range_value_t<std::decay_t<T>>>
 std::string dumps(const T &map_like) {
   std::string str;
   for (const auto &[i, elem] : map_like | std::views::enumerate) {
@@ -204,17 +270,6 @@ template <typename T> std::string dumps(const T *ptr) {
   }
   return "null";
 }
-
-template <typename T>
-concept is_smart_pointer = requires(const T &ptr) {
-  { *ptr };
-  { static_cast<bool>(ptr) };
-} && !std::is_pointer_v<std::decay_t<T>>;
-
-template <typename T>
-concept is_weak_pointer = requires(const T &ptr) {
-  { ptr.lock() };
-} && !std::is_pointer_v<std::decay_t<T>> && !is_smart_pointer<T>;
 
 template <typename T>
   requires is_smart_pointer<T>
