@@ -12,6 +12,16 @@ template <typename T> struct S {
     using type = T;
 };
 
+namespace user {
+    struct UserDefine {
+        int age = 100;
+    };
+
+    std::string dumps(const UserDefine &user) {
+        return std::format("{{\"age\": {}}}", user.age);
+    }
+}
+
 int main() {
     int x = 1;
     std::print("{}\n", dumps(x));
@@ -30,4 +40,7 @@ int main() {
 
     auto tup1 = std::tuple(1);
     std::print("{}\n", dumps(tup1));
+
+    std::vector<user::UserDefine> vec = {{1}, {2}};
+    std::print("{}\n", dumps(vec));
 }
