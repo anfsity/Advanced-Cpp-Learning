@@ -92,6 +92,13 @@ void test1() {
   std::print("{}\n", std::meta::display_string_of(r));
   std::print("{}\n", printFullName<r>());
   std::print("{}\n", printFullName<op>());
+
+  // std::print("{}\n", tmp_r);
+  constexpr int x = 1;
+  constexpr auto xfoo = foo<int>{};
+  constexpr auto type_info = std::meta::type_of(^^xfoo); 
+  std::print("type info : {}\n", std::meta::display_string_of(type_info));
+  std::print("type info : {}\n", std::meta::display_string_of(type_info));
 }
 
 //////////////////////////////////////////////////////////////////
@@ -183,17 +190,15 @@ template <typename T> void print_json(const T &obj) {
 
 ////////////////////////////////////////////////////////////////////
 
-
 struct MyTuple; // 用于被 define_aggregate 注入的“空壳”类型
 
 consteval void define_tuple() {
   // 定义成员规格
   std::array<std::meta::info, 3> members = {
-      std::meta::data_member_spec(^^int),
-      std::meta::data_member_spec(^^double),
-      std::meta::data_member_spec(^^std::string)
-  };
-  // 利用 define_aggregate 将成员注入到空壳中，使其变成为真正的 structural struct
+      std::meta::data_member_spec(^^int), std::meta::data_member_spec(^^double),
+      std::meta::data_member_spec(^^std::string)};
+  // 利用 define_aggregate 将成员注入到空壳中，使其变成为真正的 structural
+  // struct
   std::meta::define_aggregate(^^MyTuple, members);
 }
 // 执行编译期注入 (P2996 提案支持的代码块注入)
@@ -201,19 +206,18 @@ consteval { define_tuple(); }
 
 void test3() {
   MyTuple t;
-  
+
   // MyTuple 已经被反射生成完毕，现在可以照常获取它的成员
   constexpr auto members = std::define_static_array(
       std::meta::nonstatic_data_members_of(^^MyTuple, no_check));
-      
-  t.[: members[0] :] = 42;
-  t.[: members[2] :] = "hello";
 
-  std::println("{}, {}", t.[: members[0] :], t.[: members[2] :]);
+  t.[:members[0]:] = 42;
+  t.[:members[2]:] = "hello";
+
+  std::println("{}, {}", t.[:members[0]:], t.[:members[2]:]);
 }
 
 ////////////////////////////////////////////////////////////////////
-
 
 int main() {
   constexpr std::meta::info rint = ^^int; // Ｏ(≧▽≦)Ｏ
